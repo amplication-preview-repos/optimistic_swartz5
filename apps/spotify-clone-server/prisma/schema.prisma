@@ -1,0 +1,64 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Playlist {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String?
+  description String?
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+}
+
+model Song {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  title       String?
+  releaseDate DateTime?
+  duration    Int?
+  album       Album?    @relation(fields: [albumId], references: [id])
+  albumId     String?
+}
+
+model Album {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  title       String?
+  releaseDate DateTime?
+  genre       String?
+  artist      Artist?   @relation(fields: [artistId], references: [id])
+  artistId    String?
+  songs       Song[]
+}
+
+model Artist {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  genre     String?
+  category  String?
+  name      String?
+  albums    Album[]
+}
+
+model User {
+  id        String     @id @default(cuid())
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  firstName String?
+  lastName  String?
+  username  String     @unique
+  email     String?    @unique
+  password  String
+  roles     Json
+  playlists Playlist[]
+}
