@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { AlbumService } from "../album.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { AlbumCreateInput } from "./AlbumCreateInput";
 import { Album } from "./Album";
 import { AlbumFindManyArgs } from "./AlbumFindManyArgs";
@@ -26,10 +30,27 @@ import { SongFindManyArgs } from "../../song/base/SongFindManyArgs";
 import { Song } from "../../song/base/Song";
 import { SongWhereUniqueInput } from "../../song/base/SongWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class AlbumControllerBase {
-  constructor(protected readonly service: AlbumService) {}
+  constructor(
+    protected readonly service: AlbumService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Album })
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  @swagger.ApiBody({
+    type: AlbumCreateInput,
+  })
   async createAlbum(@common.Body() data: AlbumCreateInput): Promise<Album> {
     return await this.service.createAlbum({
       data: {
@@ -58,9 +79,18 @@ export class AlbumControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Album] })
   @ApiNestedQuery(AlbumFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async albums(@common.Req() request: Request): Promise<Album[]> {
     const args = plainToClass(AlbumFindManyArgs, request.query);
     return this.service.albums({
@@ -82,9 +112,18 @@ export class AlbumControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Album })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async album(
     @common.Param() params: AlbumWhereUniqueInput
   ): Promise<Album | null> {
@@ -113,9 +152,21 @@ export class AlbumControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Album })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  @swagger.ApiBody({
+    type: AlbumUpdateInput,
+  })
   async updateAlbum(
     @common.Param() params: AlbumWhereUniqueInput,
     @common.Body() data: AlbumUpdateInput
@@ -160,6 +211,14 @@ export class AlbumControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Album })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteAlbum(
     @common.Param() params: AlbumWhereUniqueInput
   ): Promise<Album | null> {
@@ -191,8 +250,14 @@ export class AlbumControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/songs")
   @ApiNestedQuery(SongFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "read",
+    possession: "any",
+  })
   async findSongs(
     @common.Req() request: Request,
     @common.Param() params: AlbumWhereUniqueInput
@@ -224,6 +289,11 @@ export class AlbumControllerBase {
   }
 
   @common.Post("/:id/songs")
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "update",
+    possession: "any",
+  })
   async connectSongs(
     @common.Param() params: AlbumWhereUniqueInput,
     @common.Body() body: SongWhereUniqueInput[]
@@ -241,6 +311,11 @@ export class AlbumControllerBase {
   }
 
   @common.Patch("/:id/songs")
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "update",
+    possession: "any",
+  })
   async updateSongs(
     @common.Param() params: AlbumWhereUniqueInput,
     @common.Body() body: SongWhereUniqueInput[]
@@ -258,6 +333,11 @@ export class AlbumControllerBase {
   }
 
   @common.Delete("/:id/songs")
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "update",
+    possession: "any",
+  })
   async disconnectSongs(
     @common.Param() params: AlbumWhereUniqueInput,
     @common.Body() body: SongWhereUniqueInput[]

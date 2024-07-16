@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+                 package song;
+service SongService {
+ rpc createSong (SongCreateInput) returns (Song) {}
+rpc songs (findManyParams) returns (stream Song) {}
+rpc song (SongWhereUniqueInput) returns (Song) {}
+rpc updateSong (SongUpdateInput) returns (Song) {}
+rpc deleteSong (SongWhereUniqueInput) returns (Song) {} 
+ }
+message SongCreateInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string title = 4;
+string releaseDate = 5;
+int32 duration = 6;
+};
+message Song {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string title = 4;
+string releaseDate = 5;
+int32 duration = 6;
+};
+message SongWhereUniqueInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string title = 4;
+string releaseDate = 5;
+int32 duration = 6;
+};
+message SongUpdateInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string title = 4;
+string releaseDate = 5;
+int32 duration = 6;
+};
+message findManyParams {
+
+};

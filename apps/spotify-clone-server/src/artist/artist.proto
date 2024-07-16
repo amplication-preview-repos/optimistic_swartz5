@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+                 package artist;
+service ArtistService {
+ rpc createArtist (ArtistCreateInput) returns (Artist) {}
+rpc artists (findManyParams) returns (stream Artist) {}
+rpc artist (ArtistWhereUniqueInput) returns (Artist) {}
+rpc updateArtist (ArtistUpdateInput) returns (Artist) {}
+rpc deleteArtist (ArtistWhereUniqueInput) returns (Artist) {}
+rpc findManyArtist (ArtistWhereUniqueInput) returns (stream Album) {}
+rpc updateArtist (AlbumParams) returns (stream Album) {}
+rpc connectArtist (AlbumParams) returns (Album) {}
+rpc disconnectArtist (AlbumParams) returns (Album) {} 
+ }
+message ArtistCreateInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string genre = 4;
+string category = 5;
+string name = 6;
+repeated Album albums = 7;
+};
+message Artist {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string genre = 4;
+string category = 5;
+string name = 6;
+repeated Album albums = 7;
+};
+message ArtistWhereUniqueInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string genre = 4;
+string category = 5;
+string name = 6;
+repeated Album albums = 7;
+};
+message ArtistUpdateInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string genre = 4;
+string category = 5;
+string name = 6;
+repeated Album albums = 7;
+};
+message findManyParams {
+
+};
+message Album {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string title = 4;
+string releaseDate = 5;
+string genre = 6;
+};
+message AlbumWhereUniqueInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string title = 4;
+string releaseDate = 5;
+string genre = 6;
+};
+message AlbumParams {
+ArtistWhereUniqueInput artistWhereUniqueInput = 1;
+AlbumWhereUniqueInput albumWhereUniqueInput = 2;
+};

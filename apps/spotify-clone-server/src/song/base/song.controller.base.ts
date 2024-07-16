@@ -16,17 +16,38 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { SongService } from "../song.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { SongCreateInput } from "./SongCreateInput";
 import { Song } from "./Song";
 import { SongFindManyArgs } from "./SongFindManyArgs";
 import { SongWhereUniqueInput } from "./SongWhereUniqueInput";
 import { SongUpdateInput } from "./SongUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class SongControllerBase {
-  constructor(protected readonly service: SongService) {}
+  constructor(
+    protected readonly service: SongService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Song })
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  @swagger.ApiBody({
+    type: SongCreateInput,
+  })
   async createSong(@common.Body() data: SongCreateInput): Promise<Song> {
     return await this.service.createSong({
       data: {
@@ -55,9 +76,18 @@ export class SongControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Song] })
   @ApiNestedQuery(SongFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async songs(@common.Req() request: Request): Promise<Song[]> {
     const args = plainToClass(SongFindManyArgs, request.query);
     return this.service.songs({
@@ -79,9 +109,18 @@ export class SongControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Song })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async song(
     @common.Param() params: SongWhereUniqueInput
   ): Promise<Song | null> {
@@ -110,9 +149,21 @@ export class SongControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Song })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  @swagger.ApiBody({
+    type: SongUpdateInput,
+  })
   async updateSong(
     @common.Param() params: SongWhereUniqueInput,
     @common.Body() data: SongUpdateInput
@@ -157,6 +208,14 @@ export class SongControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Song })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteSong(
     @common.Param() params: SongWhereUniqueInput
   ): Promise<Song | null> {

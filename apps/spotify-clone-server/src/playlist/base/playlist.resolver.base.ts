@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Playlist } from "./Playlist";
 import { PlaylistCountArgs } from "./PlaylistCountArgs";
 import { PlaylistFindManyArgs } from "./PlaylistFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdatePlaylistArgs } from "./UpdatePlaylistArgs";
 import { DeletePlaylistArgs } from "./DeletePlaylistArgs";
 import { User } from "../../user/base/User";
 import { PlaylistService } from "../playlist.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Playlist)
 export class PlaylistResolverBase {
-  constructor(protected readonly service: PlaylistService) {}
+  constructor(
+    protected readonly service: PlaylistService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "read",
+    possession: "any",
+  })
   async _playlistsMeta(
     @graphql.Args() args: PlaylistCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class PlaylistResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Playlist])
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "read",
+    possession: "any",
+  })
   async playlists(
     @graphql.Args() args: PlaylistFindManyArgs
   ): Promise<Playlist[]> {
     return this.service.playlists(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Playlist, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "read",
+    possession: "own",
+  })
   async playlist(
     @graphql.Args() args: PlaylistFindUniqueArgs
   ): Promise<Playlist | null> {
@@ -53,7 +81,13 @@ export class PlaylistResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Playlist)
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "create",
+    possession: "any",
+  })
   async createPlaylist(
     @graphql.Args() args: CreatePlaylistArgs
   ): Promise<Playlist> {
@@ -71,7 +105,13 @@ export class PlaylistResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Playlist)
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "update",
+    possession: "any",
+  })
   async updatePlaylist(
     @graphql.Args() args: UpdatePlaylistArgs
   ): Promise<Playlist | null> {
@@ -99,6 +139,11 @@ export class PlaylistResolverBase {
   }
 
   @graphql.Mutation(() => Playlist)
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "delete",
+    possession: "any",
+  })
   async deletePlaylist(
     @graphql.Args() args: DeletePlaylistArgs
   ): Promise<Playlist | null> {
@@ -114,9 +159,15 @@ export class PlaylistResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => User, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "User",
+    action: "read",
+    possession: "any",
   })
   async getUser(@graphql.Parent() parent: Playlist): Promise<User | null> {
     const result = await this.service.getUser(parent.id);

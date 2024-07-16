@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Song } from "./Song";
 import { SongCountArgs } from "./SongCountArgs";
 import { SongFindManyArgs } from "./SongFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateSongArgs } from "./UpdateSongArgs";
 import { DeleteSongArgs } from "./DeleteSongArgs";
 import { Album } from "../../album/base/Album";
 import { SongService } from "../song.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Song)
 export class SongResolverBase {
-  constructor(protected readonly service: SongService) {}
+  constructor(
+    protected readonly service: SongService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "read",
+    possession: "any",
+  })
   async _songsMeta(
     @graphql.Args() args: SongCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,12 +51,24 @@ export class SongResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Song])
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "read",
+    possession: "any",
+  })
   async songs(@graphql.Args() args: SongFindManyArgs): Promise<Song[]> {
     return this.service.songs(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Song, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "read",
+    possession: "own",
+  })
   async song(@graphql.Args() args: SongFindUniqueArgs): Promise<Song | null> {
     const result = await this.service.song(args);
     if (result === null) {
@@ -49,7 +77,13 @@ export class SongResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Song)
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "create",
+    possession: "any",
+  })
   async createSong(@graphql.Args() args: CreateSongArgs): Promise<Song> {
     return await this.service.createSong({
       ...args,
@@ -65,7 +99,13 @@ export class SongResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Song)
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "update",
+    possession: "any",
+  })
   async updateSong(@graphql.Args() args: UpdateSongArgs): Promise<Song | null> {
     try {
       return await this.service.updateSong({
@@ -91,6 +131,11 @@ export class SongResolverBase {
   }
 
   @graphql.Mutation(() => Song)
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "delete",
+    possession: "any",
+  })
   async deleteSong(@graphql.Args() args: DeleteSongArgs): Promise<Song | null> {
     try {
       return await this.service.deleteSong(args);
@@ -104,9 +149,15 @@ export class SongResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Album, {
     nullable: true,
     name: "album",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "read",
+    possession: "any",
   })
   async getAlbum(@graphql.Parent() parent: Song): Promise<Album | null> {
     const result = await this.service.getAlbum(parent.id);

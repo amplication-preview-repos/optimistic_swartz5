@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Album } from "./Album";
 import { AlbumCountArgs } from "./AlbumCountArgs";
 import { AlbumFindManyArgs } from "./AlbumFindManyArgs";
@@ -24,10 +30,20 @@ import { SongFindManyArgs } from "../../song/base/SongFindManyArgs";
 import { Song } from "../../song/base/Song";
 import { Artist } from "../../artist/base/Artist";
 import { AlbumService } from "../album.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Album)
 export class AlbumResolverBase {
-  constructor(protected readonly service: AlbumService) {}
+  constructor(
+    protected readonly service: AlbumService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "read",
+    possession: "any",
+  })
   async _albumsMeta(
     @graphql.Args() args: AlbumCountArgs
   ): Promise<MetaQueryPayload> {
@@ -37,12 +53,24 @@ export class AlbumResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Album])
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "read",
+    possession: "any",
+  })
   async albums(@graphql.Args() args: AlbumFindManyArgs): Promise<Album[]> {
     return this.service.albums(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Album, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "read",
+    possession: "own",
+  })
   async album(
     @graphql.Args() args: AlbumFindUniqueArgs
   ): Promise<Album | null> {
@@ -53,7 +81,13 @@ export class AlbumResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Album)
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "create",
+    possession: "any",
+  })
   async createAlbum(@graphql.Args() args: CreateAlbumArgs): Promise<Album> {
     return await this.service.createAlbum({
       ...args,
@@ -69,7 +103,13 @@ export class AlbumResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Album)
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "update",
+    possession: "any",
+  })
   async updateAlbum(
     @graphql.Args() args: UpdateAlbumArgs
   ): Promise<Album | null> {
@@ -97,6 +137,11 @@ export class AlbumResolverBase {
   }
 
   @graphql.Mutation(() => Album)
+  @nestAccessControl.UseRoles({
+    resource: "Album",
+    action: "delete",
+    possession: "any",
+  })
   async deleteAlbum(
     @graphql.Args() args: DeleteAlbumArgs
   ): Promise<Album | null> {
@@ -112,7 +157,13 @@ export class AlbumResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Song], { name: "songs" })
+  @nestAccessControl.UseRoles({
+    resource: "Song",
+    action: "read",
+    possession: "any",
+  })
   async findSongs(
     @graphql.Parent() parent: Album,
     @graphql.Args() args: SongFindManyArgs
@@ -126,9 +177,15 @@ export class AlbumResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Artist, {
     nullable: true,
     name: "artist",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Artist",
+    action: "read",
+    possession: "any",
   })
   async getArtist(@graphql.Parent() parent: Album): Promise<Artist | null> {
     const result = await this.service.getArtist(parent.id);

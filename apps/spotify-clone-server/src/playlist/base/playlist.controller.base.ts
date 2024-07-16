@@ -16,17 +16,38 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { PlaylistService } from "../playlist.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { PlaylistCreateInput } from "./PlaylistCreateInput";
 import { Playlist } from "./Playlist";
 import { PlaylistFindManyArgs } from "./PlaylistFindManyArgs";
 import { PlaylistWhereUniqueInput } from "./PlaylistWhereUniqueInput";
 import { PlaylistUpdateInput } from "./PlaylistUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class PlaylistControllerBase {
-  constructor(protected readonly service: PlaylistService) {}
+  constructor(
+    protected readonly service: PlaylistService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Playlist })
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  @swagger.ApiBody({
+    type: PlaylistCreateInput,
+  })
   async createPlaylist(
     @common.Body() data: PlaylistCreateInput
   ): Promise<Playlist> {
@@ -56,9 +77,18 @@ export class PlaylistControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Playlist] })
   @ApiNestedQuery(PlaylistFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async playlists(@common.Req() request: Request): Promise<Playlist[]> {
     const args = plainToClass(PlaylistFindManyArgs, request.query);
     return this.service.playlists({
@@ -79,9 +109,18 @@ export class PlaylistControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Playlist })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async playlist(
     @common.Param() params: PlaylistWhereUniqueInput
   ): Promise<Playlist | null> {
@@ -109,9 +148,21 @@ export class PlaylistControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Playlist })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
+  @swagger.ApiBody({
+    type: PlaylistUpdateInput,
+  })
   async updatePlaylist(
     @common.Param() params: PlaylistWhereUniqueInput,
     @common.Body() data: PlaylistUpdateInput
@@ -155,6 +206,14 @@ export class PlaylistControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Playlist })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Playlist",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deletePlaylist(
     @common.Param() params: PlaylistWhereUniqueInput
   ): Promise<Playlist | null> {

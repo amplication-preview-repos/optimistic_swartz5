@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+                 package playlist;
+service PlaylistService {
+ rpc createPlaylist (PlaylistCreateInput) returns (Playlist) {}
+rpc playlists (findManyParams) returns (stream Playlist) {}
+rpc playlist (PlaylistWhereUniqueInput) returns (Playlist) {}
+rpc updatePlaylist (PlaylistUpdateInput) returns (Playlist) {}
+rpc deletePlaylist (PlaylistWhereUniqueInput) returns (Playlist) {} 
+ }
+message PlaylistCreateInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string name = 4;
+string description = 5;
+};
+message Playlist {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string name = 4;
+string description = 5;
+};
+message PlaylistWhereUniqueInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string name = 4;
+string description = 5;
+};
+message PlaylistUpdateInput {
+string id = 1;
+string createdAt = 2;
+string updatedAt = 3;
+string name = 4;
+string description = 5;
+};
+message findManyParams {
+
+};
